@@ -46,7 +46,7 @@ export default function Community() {
     {
       name: "Community Spotlight",
       role: "Featured Project",
-      description: "Our community members are building incredible things. From AI-powered agricultural tools to healthcare data pipelines, the projects born at OAC are making a real impact across Ohio.",
+      description: "Coming soon.",
       image: "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=400",
     },
     {
