@@ -123,7 +123,7 @@ export default function Mission() {
             </p>
 
             <div className="flex justify-start">
-              <a href="https://joinforge.beehiiv.com/" target="_blank" rel="noopener noreferrer">
+              <a href="https://magic.beehiiv.com/v1/22fce6ce-8541-4bf4-9b14-e77a9b219697?email=<email>&utm_source=website" target="_blank" rel="noopener noreferrer">
                 <Button size="lg" className="text-lg px-8 font-semibold uppercase"
                         style={{
                           backgroundColor: '#D14D28',
