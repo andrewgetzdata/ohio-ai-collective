@@ -8,7 +8,10 @@ export default function HeroAmbient() {
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    const chars = ['.', ' ', ':', '+', '-', '=', 'X'];
+    let animationId;
+
+    const particles = [];
+    const particleCount = 80;
 
     const updateSize = () => {
       canvas.width = window.innerWidth;
@@ -17,77 +20,97 @@ export default function HeroAmbient() {
     updateSize();
     window.addEventListener('resize', updateSize);
 
-    const cellSize = 14;
-    const cols = Math.ceil(canvas.width / cellSize) + 50;
-    const rows = Math.ceil(canvas.height / cellSize);
+    // Initialize particles
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        radius: Math.random() * 2 + 0.5,
+        color: Math.random() > 0.5 ? '56, 189, 248' : '168, 85, 247', // cyan or purple
+        pulse: Math.random() * Math.PI * 2,
+      });
+    }
 
     let time = 0;
-    const scrollSpeed = 0.5;
 
     const animate = () => {
-      ctx.fillStyle = '#F7F7F2';
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw ambient gradient orbs
+      const orb1X = canvas.width * 0.3 + Math.sin(time * 0.005) * 100;
+      const orb1Y = canvas.height * 0.4 + Math.cos(time * 0.007) * 60;
+      const grad1 = ctx.createRadialGradient(orb1X, orb1Y, 0, orb1X, orb1Y, 300);
+      grad1.addColorStop(0, 'rgba(56, 189, 248, 0.08)');
+      grad1.addColorStop(1, 'rgba(56, 189, 248, 0)');
+      ctx.fillStyle = grad1;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.font = `${cellSize}px monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      const orb2X = canvas.width * 0.7 + Math.cos(time * 0.006) * 80;
+      const orb2Y = canvas.height * 0.6 + Math.sin(time * 0.008) * 50;
+      const grad2 = ctx.createRadialGradient(orb2X, orb2Y, 0, orb2X, orb2Y, 250);
+      grad2.addColorStop(0, 'rgba(168, 85, 247, 0.06)');
+      grad2.addColorStop(1, 'rgba(168, 85, 247, 0)');
+      ctx.fillStyle = grad2;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const x = col * cellSize - (time * scrollSpeed % (cols * cellSize));
-          const y = row * cellSize;
+      // Update and draw particles
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.pulse += 0.02;
 
-          if (x < -cellSize * 2 || x > canvas.width + cellSize * 2) continue;
+        // Wrap around
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
 
-          // Create fire-like pattern with turbulence
-          const noise1 = Math.sin((row * 0.15) + (col * 0.08) + time * 0.02) * 3;
-          const noise2 = Math.cos((row * 0.12) + (col * 0.1) - time * 0.025) * 2.5;
-          const noise3 = Math.sin((row + col) * 0.06 + time * 0.03) * 2;
-          const flicker = Math.sin(time * 0.1 + col * 0.5) * 0.8;
+        const opacity = 0.3 + Math.sin(p.pulse) * 0.2;
 
-          // Distance from bottom creates flame shape (hotter at bottom)
-          const distFromBottom = rows - row;
-          const baseIntensity = distFromBottom * 0.2;
+        // Draw glow
+        const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius * 8);
+        glow.addColorStop(0, `rgba(${p.color}, ${opacity * 0.3})`);
+        glow.addColorStop(1, `rgba(${p.color}, 0)`);
+        ctx.fillStyle = glow;
+        ctx.fillRect(p.x - p.radius * 8, p.y - p.radius * 8, p.radius * 16, p.radius * 16);
 
-          const turbulence = noise1 + noise2 + noise3 + flicker;
-          const intensity = baseIntensity + turbulence;
+        // Draw particle
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${p.color}, ${opacity})`;
+        ctx.fill();
+      }
 
-          const charIndex = Math.max(0, Math.min(chars.length - 1, Math.floor(intensity)));
-          const char = chars[charIndex];
+      // Draw connections between close particles
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
 
-          // Opacity with flickering
-          const baseOpacity = charIndex / chars.length * 0.4;
-          const flickerAmount = Math.sin(time * 0.08 + row * 0.3 + col * 0.2) * 0.1;
-          const opacity = Math.max(0.02, Math.min(0.35, baseOpacity + flickerAmount));
-
-          // Subtle time-based color shifting
-          const colorShift = Math.sin(time * 0.005) * 15;
-
-          // Color based on intensity (warm palette)
-          let r, g, b;
-          if (charIndex >= 5) {
-            r = Math.min(255, 209 + colorShift); g = 77; b = 40; // Burnt orange
-          } else if (charIndex >= 3) {
-            r = Math.min(255, 232 + colorShift); g = 131; b = 74; // Warm amber
-          } else if (charIndex >= 1) {
-            r = 196; g = 168; b = 130; // Warm tan
-          } else {
-            r = 213; g = 207; b = 192; // Warm grey
+          if (dist < 150) {
+            const opacity = (1 - dist / 150) * 0.1;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(56, 189, 248, ${opacity})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
           }
-
-          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-          ctx.fillText(char, x, y + cellSize / 2);
         }
       }
 
       time += 1;
-      requestAnimationFrame(animate);
+      animationId = requestAnimationFrame(animate);
     };
 
     animate();
 
     return () => {
       window.removeEventListener('resize', updateSize);
+      cancelAnimationFrame(animationId);
     };
   }, []);
 
@@ -96,14 +119,6 @@ export default function HeroAmbient() {
       <canvas
         ref={canvasRef}
         className="absolute inset-0"
-        style={{ opacity: 0.3 }}
-      />
-
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'radial-gradient(circle at center, transparent 30%, rgba(247, 247, 242, 0.4) 70%, #F7F7F2 100%)'
-        }}
       />
     </div>
   );
